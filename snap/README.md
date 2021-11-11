@@ -392,14 +392,14 @@ Example: `snap set edgexfoundry env.device-virtual.service.port=7777`
 
 | [Service]                     | Description |
 | ------------------------------| ----------- |
-| service.health-check-interval | HealthCheckInterval is the interval for Registry heal check callback |
-| service.host:                 | Host is the hostname or IP address of the service. |
-| service.port                  | Port is the HTTP port of the service. |
-| service.server-bind-addr      | ServerBindAddr specifies an IP address or hostname  for ListenAndServe to bind to, such as 0.0.0.0 |
-| service.startup-msg           | StartupMsg specifies a string to log once service  initialization and startup is completed. |
-| service.max-result-count      | MaxResultCount specifies the maximum size list supported in response to REST calls to other services. |
-| service.max-request-size      | MaxRequestSize defines the maximum size of http request body in bytes |
-| service.request-timeout       | RequestTimeout specifies a timeout (in milliseconds) for processing REST request calls from other services. |
+| service.health-check-interval | Sets the interval for Registry heal check callback |
+| service.host:                 | Sets the hostname or IP address of the service. |
+| service.port                  | Sets the HTTP port of the service. |
+| service.server-bind-addr      | Specifies an IP address or hostname  for ListenAndServe to bind to, such as 0.0.0.0 |
+| service.startup-msg           | Specifies a string to log once service  initialization and startup is completed. |
+| service.max-result-count      | Specifies the maximum size list supported in response to REST calls to other services. |
+| service.max-request-size      | Defines the maximum size of http request body in bytes |
+| service.request-timeout       | Specifies a timeout (in milliseconds) for processing REST request calls from other services. |
 
 | [SecretStore]                           | Description                                                  |
 | --------------------------------------- | ------------------------------------------------------------ |
@@ -419,35 +419,35 @@ Example: `snap set edgexfoundry env.device-virtual.service.port=7777`
 | [MessageQueue] (core-data only)   | Description |
 | --------------------------------- | ----------- |
 | messagequeue.type                 | Indicates the message bus implementation to use, i.e. mqtt, redis streams. |
-| messagequeue.protocol             | Protocol indicates the protocol to use when accessing the message bus.|
-|	messagequeue.host                 | Host is the hostname or IP address of the broker, if applicable.|
-| messagequeue.port                 | Port defines the port on which to access the message bus.|
-| messagequeue.publish-topic-prefix | PublishTopicPrefix indicates the topic prefix the data is published to.|
-| messagequeue.subscribe-topic      | SubscribeTopic indicates the topic in which to subscribe.|
-| messagequeue.auth-mode            | AuthMode specifies the type of secure connection to the message bus which are 'none', 'usernamepassword','clientcert' or 'cacert'. Not all option supported by each implementation. ZMQ doesn't support any Authmode beyond 'none', RedisStreams only supports 'none' & 'usernamepassword' while MQTT supports all options.|
-|messagequeue.secret-name           | SecretName is the name of the secret in the SecretStore that contains the Auth Credentials. The credential are dynamically loaded using this name and store the Option property below where the implementation expected to find them.|
-|messagequeue.subscribe-enabled     | SubscribeEnabled indicates whether enable the subscription to the Message Queue|
+| messagequeue.protocol             | Indicates the protocol to use when accessing the message bus.|
+|	messagequeue.host                 | Sets the hostname or IP address of the broker, if applicable.|
+| messagequeue.port                 | Defines the port on which to access the message bus.|
+| messagequeue.publish-topic-prefix | Indicates the topic prefix the data is published to.|
+| messagequeue.subscribe-topic      | Indicates the topic in which to subscribe.|
+| messagequeue.auth-mode            | Specifies the type of secure connection to the message bus which are 'none', 'usernamepassword','clientcert' or 'cacert'. Not all option supported by each implementation. ZMQ doesn't support any Authmode beyond 'none', RedisStreams only supports 'none' & 'usernamepassword' while MQTT supports all options.|
+|messagequeue.secret-name           | Sets the name of the secret in the SecretStore that contains the Auth Credentials. The credential are dynamically loaded using this name and store the Option property below where the implementation expected to find them.|
+|messagequeue.subscribe-enabled     | Indicates whether enable the subscription to the Message Queue|
 
 | [Trigger]   | Description |
 | -------------------------------------------------------- | ----------- |
-| trigger.edgex-message-bus.subscribe-host.port            | Port defines the port on which to access the EdgexMessageBus's SubscribeHost.|
-| trigger.edgex-message-bus.subscribe-host.protocol        | Protocol indicates the protocol to use when accessing the EdgexMessageBus's SubscribeHost. |
-| trigger.edgex-message-bus.subscribe-host.subscribe-topics| SubscribeTopic indicates the topic in which edgexMessageBus's SubscribeHost to subscribe. |
-| trigger.edgex-message-bus.publish-host.port              | Port defines the port on which to access the EdgexMessageBus's PublishHost. |
-| trigger.edgex-message-bus.publish-host.protocol          | Protocol indicates the protocol to use when accessing the EdgexMessageBus's PublishHost. |
-| trigger.edgex-message-bus.publish-host.publish-topic     | PublishTopic indicates the topic in which edgexMessageBus's PublishHost to subscribe. |
+| trigger.edgex-message-bus.subscribe-host.port            | Defines the port on which to access the Edgex Message Bus's subscribe host.|
+| trigger.edgex-message-bus.subscribe-host.protocol        | Indicates the protocol to use when accessing the Edgex Message Bus's subscribe host. |
+| trigger.edgex-message-bus.subscribe-host.subscribe-topics| Indicates the topic in which Edgex Message Bus's subscribe host to subscribe. |
+| trigger.edgex-message-bus.publish-host.port              | Defines the port on which to access the Edgex Message Bus's publish host. |
+| trigger.edgex-message-bus.publish-host.protocol          | Indicates the protocol to use when accessing the Edgex Message Bus's publish host. |
+| trigger.edgex-message-bus.publish-host.publish-topic     | Indicates the topic in which Edgex Message Bus's publish host to subscribe. |
 
 ### API Gateway settings (prefix: `env.security-proxy.`)
 
 | API Gateway setting   | Description |
 | --------------------- | ----------- |
-| add-proxy-route       | The add-proxy-route setting is a configuration TOML containing a list of URLs to be added to the API Gateway (aka Kong). See [documentation](https://docs.edgexfoundry.org/2.1/security/Ch-APIGateway/#configuration-of-adding-microservices-routes-for-api-gateway) NOTE - this setting is not a configuration override, it's a top-level environment variable used by the security-proxy-setup. That means it can not be configureed thourgh `snap set` |
+| add-proxy-route       | Defines a configuration TOML containing a list of URLs to be added to the API Gateway (aka Kong). See [documentation](https://docs.edgexfoundry.org/2.1/security/Ch-APIGateway/#configuration-of-adding-microservices-routes-for-api-gateway) NOTE - this setting is not a configuration override, it's a top-level environment variable used by the security-proxy-setup. That means it can not be configureed thourgh `snap set` |
 
 ### Secret Store settings (prefix: `env.security-secret-store.`)
 
 | API Gateway setting   | Description |
 | --------------------- | ----------- |
-| add-secretstore-tokens | The add-secretstore-tokens setting is a JSON list of service keys to be added to the list of Vault tokens that security-file-token-provider (launched by security-secretstore-setup) creates. It is set to a default list of additional services by the snap, so be sure to examine the default setting before providing a custom list of services. NOTE - this setting is not a configuration override, it's a top-level environment variable used by the security-secretstore-setup. |
+| add-secretstore-tokens| Defines a JSON list of service keys to be added to the list of Vault tokens that security-file-token-provider (launched by security-secretstore-setup) creates. It is set to a default list of additional services by the snap, so be sure to examine the default setting before providing a custom list of services. NOTE - this setting is not a configuration override, it's a top-level environment variable used by the security-secretstore-setup. |
 | add-known-secrets | The add-known-secrets setting is a JSON list of secret paths and associated services. It's used to provision the specified secret for the given service in Vault. It is set to a default list of additional services by the snap, so be sure to examine the default setting before providing a custom list of services. NOTE - this setting is not a configuration override, it's a top-level environment variable used by the security-secretstore-setup. |
 | default-token-ttl | The default-token-ttl setting is a Go Duration string, a sequence of decimal numbers, each with optional fraction and a unit suffix (e.g. "ns", "us" (or "µs"), "ms", "s", "m", "h"). It's used to set the TTL of vault tokens generated for EdgeX services during bootstrap. This setting can be used to increase (or decrease) the default TTL (one hour). If the TTL of a token expires before a service is started, the service will not be able to access the Secret Store.|
 
@@ -455,7 +455,7 @@ Example: `snap set edgexfoundry env.device-virtual.service.port=7777`
 
 | setting   | Description |
 | --------------------- | ----------- |
-| add-registry-acl-roles| The add-registry-acl-roles is a JSON list of service keys used to create ACL roles in Vault to allow secure Consul access for the services. It contains a comma-separated list of registry role names to be added |
+| add-registry-acl-roles| Defines a JSON list of service keys used to create ACL roles in Vault to allow secure Consul access for the services. It contains a comma-separated list of registry role names to be added |
 
 
 ### Support Notifications settings (prefix: `env.support-notifications.`)
