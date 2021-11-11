@@ -155,8 +155,8 @@ see `snap/hooks/install` in this repository) to `$SNAP_DATA/config`.
 
 **Note** - `$SNAP` resolves to the path `/snap/edgexfoundry/current/` and `$SNAP_DATA` resolves to `/var/snap/edgexfoundry/current`.
 
-The preferred way to change the configuration is top use [Configuration Overrides](#configuration-overrides) section below. 
-It is also possible to change configuration directly via [Consul's UI](http://localhost:8500/ui/) or [kv REST API](https://www.consul.io/api/kv). 
+The preferred way to change the configuration is to use [Configuration Overrides](#configuration-overrides) section below. 
+It is also possible to change configuration directly via Consul's [UI](http://localhost:8500/ui/) or [kv REST API](https://www.consul.io/api/kv). 
 Changes made to configuration in Consul require services to be restarted in order for the changes to take effect; 
 the one exception are changes made to configuration items in a service's ```[Writable]``` section. 
 Services that aren't started by default (see [Using the EdgeX snap](#using-the-edgex-snap) section above) 
@@ -198,14 +198,15 @@ please refer to [Service Environment Configuration Overrides](#service-environme
 ### Security services
 
 Currently, the security services are enabled by default. The security services constitute the following components:
+* kong-daemon (API Gateway a.k.a. Reverse Proxy)
+* postgres (kong's database)
+* vault (Secret Store)
 
- * kong-daemon
- * postgres
- * vault
- * security-bootstrapper-redis
- * security-consul-bootstrapper
- * security-proxy-setup
- * security-store-setup
+Oneshot services which perform the necessary security setup and stop:
+* security-proxy-setup (kong setup)
+* security-secretstore-setup (vault setup)
+* security-bootstrapper-redis (secure redis setup)
+* security-consul-bootstrapper (secure consul setup)
 
 #### Secret Store
 Vault is used by EdgeX for secret management (e.g. certificates, keys, passwords, ...) and is referred to as the Secret Store.
@@ -230,7 +231,7 @@ $ sudo snap set edgexfoundry security-proxy=off
 ```
 
 **Note** - by default all services in the snap except for the API Gateway are restricted to listening on 'localhost' 
-(i.e. the services arenot addressable from another system). In order to make a service accessible remotely, 
+(i.e. the services are not addressable from another system). In order to make a service accessible remotely, 
 the appropriate configuration override of the 'Service.ServerBindAddr' needs to be made 
 (e.g. ```sudo snap set edgexfoundry env.core-data.service.server-bind-addr=0.0.0.0```).
 
@@ -494,14 +495,14 @@ $ sudo snap install snapcraft
 (note you will be promted to acknowledge you are installing a classic snap - use the `--classic` flag to acknowledge this)
 
 **Note** - currently the snap doesn't support cross-compilation, and must be built natively on the target architecture. 
-Specifically, to support cross-compilation the kong/lua parts must be modified to support cross-compilation. 
-The openresty part uses non-standard flags for handling cross-compiling so all the flags would have to manually passed to build that part. 
-Also luarocks doesn't seem to easily support cross-compilation, so that would need to be figured out as well.
+Specifically, to support cross-compilation, the kong part must be modified:
+* OpenResty uses non-standard flags for handling cross-compiling so all the flags would have to manually passed to build that part.
+* LuaRocks doesn't seem to easily support cross-compilation and needs further investigation.
 
 #### Running snapcraft on MacOS
 
 To install snapcraft on MacOS, see [this link](https://snapcraft.io/docs/installing-snapcraft#heading--macos). 
-After doing so, follow in the below build instructions for "[Building with multipass](#building-with-multipass)".
+After doing so, follow the below instructions for "[Building with multipass](#building-with-multipass)".
 
 #### Running snapcraft on Windows
 
