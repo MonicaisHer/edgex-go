@@ -15,7 +15,6 @@
       - [API Gateway](#api-gateway)
         * [API Gateway user setup](#api-gateway-user-setup)
           + [JWT tokens](#jwt-tokens)
-          + [OAuth 2.0](#oauth-20)
         * [API Gateway TLS certificate setup](#api-gateway-tls-certificate-setup)
   * [Limitations](#limitations)
   * [Service environment configuration overrides](#service-environment-configuration-overrides)
@@ -35,13 +34,12 @@
     + [Developing the snap](#developing-the-snap)
       - [Interfaces](#interfaces)
 
----
 ## Overview
 
 This folder contains snap packaging for the EdgeX Foundry reference implementation.
 
-The snap contains all of the EdgeX Go-based micro services from this repository, device-virtual, app-service-configurable (for Kuiper
-integration), as well as all the necessary runtime components (e.g. Consul, Kong, Redis, ...) required to run an EdgeX instance.
+The snap contains all of the EdgeX Go-based micro services from this repository, device-virtual, app-service-configurable
+(for Kuiper integration), as well as all the necessary runtime components (e.g. Consul, Kong, Redis, ...) required to run an EdgeX instance.
 
 The project maintains a rolling release of the snap on the `edge` channel that is rebuilt and published at least once daily.
 
@@ -50,63 +48,66 @@ The snap currently supports running on both `amd64` and `arm64` platforms.
 ## Installation
 
 ### Installing snapd
-The snap can be installed on any system that supports snaps. You can see how to install 
-snaps on your system [here](https://snapcraft.io/docs/installing-snapd).
+The snap can be installed on any system that supports snaps. 
+You can see how to install snaps on your system [here](https://snapcraft.io/docs/installing-snapd).
 
-However for full security confinement, the snap should be installed on an 
-Ubuntu 18.04 LTS or later Desktop or Server, or a system running Ubuntu Core 18 or later.
+However for full security confinement, the snap should be installed on an Ubuntu 18.04 LTS or later Desktop or Server, 
+or a system running Ubuntu Core 18 or later.
 
 ### Installing EdgeX Foundry as a snap
 The snap is published in the snap store at https://snapcraft.io/edgexfoundry.
 You can see the current revisions available for your machine's architecture by running the command:
 
-```bash
+```
 $ snap info edgexfoundry
 ```
 
 The snap can be installed using `snap install`. To install the latest stable version:
 
-```bash
+```
 $ sudo snap install edgexfoundry
 ```
 
 To install the snap from the edge channel:
 
-```bash
+```
 $ sudo snap install edgexfoundry --edge
 ```
 
-**Note** - in general, installing from the edge channel is only recommended for development purposes. Depending on the state of the current development release, your mileage may vary.
+**Note** - in general, installing from the edge channel is only recommended for development purposes. 
+Depending on the state of the current development release, your mileage may vary.
 
 
-You can also specify specific releases using the `--channel` option. For example to install the Ireland (2.0) release of the snap:
+You can also specify specific releases using the `--channel` option. For example to install the Jakarta (2.1) release of the snap:
 
-```bash
-$ sudo snap install edgexfoundry --channel=2.0
-
+```
+$ sudo snap install edgexfoundry --channel=2.1
 ```
 
 Lastly, on a system supporting it, the snap may be installed using GNOME (or Ubuntu) Software Center by searching for `edgexfoundry`.
 
 **Note** - the snap has only been tested on Ubuntu Desktop/Server LTS releases (16.04 or later), as well as Ubuntu Core (16 or later).
 
-**WARNING** - don't install the EdgeX snap on a system which is already running one of the included services (e.g. Consul, Redis, Vault, ...), as this
-may result in resource conflicts (i.e. ports) which could cause the snap install to fail.
+**WARNING** - don't install the EdgeX snap on a system which is already running one of the included services 
+(e.g. Consul, Redis, Vault, ...), as this may result in resource conflicts (i.e. ports) which could cause the `snap install` to fail.
 
 ## Using the EdgeX snap
 
 Upon installation, the following EdgeX services are automatically and immediately started:
 
 * consul
+* vault
 * redis
+* kong
+* postgres
 * core-data
 * core-command
 * core-metadata
-* security-services (see [note below](https://github.com/edgexfoundry/edgex-go/tree/master/snap#security-services))
+* security-services (see [Security Services](#security-services) section below)
 
 The following services are disabled by default:
 
-* app-service-configurable (required for Kuiper)
+* app-service-configurable (required for kuiper)
 * device-virtual
 * kuiper
 * support-notifications
@@ -115,13 +116,13 @@ The following services are disabled by default:
 
 Any disabled services can be enabled and started up using `snap set`:
 
-```bash
+```
 $ sudo snap set edgexfoundry support-notifications=on
 ```
 
 To turn a service off (thereby disabling and immediately stopping it) set the service to off:
 
-```bash
+```
 $ sudo snap set edgexfoundry support-notifications=off
 ```
 
@@ -130,71 +131,81 @@ All services which are installed on the system as systemd units, which if enable
 ### Viewing logs
 To view the logs for all services in the edgexfoundry snap use:
 
-```bash
+```
 $ sudo snap logs edgexfoundry
 ```
 
 Individual service logs may be viewed by specifying the service name:
 
-```bash
+```
 $ sudo snap logs edgexfoundry.consul
 ```
 
 Or by using the systemd unit name and `journalctl`:
 
-```bash
+```
 $ journalctl -u snap.edgexfoundry.consul
 ```
 
 ### Configuring individual services
 
-All default configuration files are shipped with the snap inside `$SNAP/config`, however because `$SNAP` isn't writable, all of the config files are copied during snap installation (specifically during the install hook, see `snap/hooks/install` in this repository) to `$SNAP_DATA/config`.
+All default configuration files are shipped with the snap inside `$SNAP/config`, however because `$SNAP` isn't writable, 
+all of the config files are copied during snap installation (specifically during the install hook, 
+see `snap/hooks/install` in this repository) to `$SNAP_DATA/config`.
 
 **Note** - `$SNAP` resolves to the path `/snap/edgexfoundry/current/` and `$SNAP_DATA` resolves to `/var/snap/edgexfoundry/current`.
 
-The preferred way to change the configuration is top use configuration overrides (see below). It is also possible to change
-configuration directly via Consul's UI or [kv REST API](https://www.consul.io/api/kv.html). Changes made to configuration in Consul
-require services to be restarted in order for the changes to take effect; the one exception are changes made to configuration items in
-a service's ```[Writable]``` section. Services that aren't started by default (see above) *will* pickup any changes made to their config
-files when started.
+The preferred way to change the configuration is top use [Configuration Overrides](#configuration-overrides) section below. 
+It is also possible to change configuration directly via [Consul's UI](http://localhost:8500/ui/) or [kv REST API](https://www.consul.io/api/kv). 
+Changes made to configuration in Consul require services to be restarted in order for the changes to take effect; 
+the one exception are changes made to configuration items in a service's ```[Writable]``` section. 
+Services that aren't started by default (see [Using the EdgeX snap](#using-the-edgex-snap) section above) 
+*will* pickup any changes made to their config files when started.
 
 Also it should be noted that use of Consul is enabled by default in the snap. It is not possible at this time to run the EdgeX services in
 the snap with Consul disabled.
 
 
 ### Configuration Overrides
-The EdgeX snap supports configuration overrides via its configure and install hooks which generate service-specific .env files
-which are used to provide a custom environment to the service, overriding the default configuration provided by the service's
-```configuration.toml``` file. If a configuration override is made after a service has already started, then the service must
-be **restarted** via command-line (e.g. ```snap restart edgexfoundry.<service>```), snapd's REST API, or the SMA (sys-mgmt-agent).
-If the overrides are provided via the snap configuration defaults capability of a gadget snap, the overrides will be picked
-up when the services are first started.
+The EdgeX snap supports configuration overrides via its configure and install hooks which generate service-specific .env files 
+which are used to provide a custom environment to the service, overriding the default configuration provided by the service's ```configuration.toml``` file. 
+If a configuration override is made after a service has already started, then the service must be **restarted** via command-line 
+(e.g. ```snap restart edgexfoundry.<service>```), or [snapd's REST API](https://snapcraft.io/docs/snapd-api). 
+If the overrides are provided via the snap configuration defaults capability of a gadget snap, 
+the overrides will be picked up when the services are first started.
 
 The following syntax is used to specify service-specific configuration overrides:
 
 ```env.<service>.<stanza>.<config option>```
 
-For instance, to setup an override of Core Data's Port use:
+For instance, to setup an override of Core Data's port use:
 
-```$ sudo snap set edgexfoundry env.core-data.service.port=2112```
+```
+$ sudo snap set edgexfoundry env.core-data.service.port=2112
+```
 
 And restart the service:
 
-```$ sudo snap restart edgexfoundry.core-data```
+```
+$ sudo snap restart edgexfoundry.core-data
+```
 
 **Note** - at this time changes to configuration values in the [Writable] section are not supported.
 
-For details on the mapping of configuration options to Config options, please refer to "Service Environment Configuration Overrides".
+For details on the mapping of configuration options to config options, 
+please refer to [Service Environment Configuration Overrides](#service-environment-configuration-overrides) section.
 
 ### Security services
 
 Currently, the security services are enabled by default. The security services constitute the following components:
 
- * Kong
- * PostgreSQL
- * Vault 
- * security-secretstore
+ * kong-daemon
+ * postgres
+ * vault
+ * security-bootstrapper-redis
+ * security-consul-bootstrapper
  * security-proxy-setup
+ * security-store-setup
 
 #### Secret Store
 Vault is used by EdgeX for secret management (e.g. certificates, keys, passwords, ...) and is referred to as the Secret Store.
@@ -202,37 +213,36 @@ Vault is used by EdgeX for secret management (e.g. certificates, keys, passwords
 Use of Secret Store by all services can be disabled globally, but doing so will also disable the API Gateway, as it depends on the Secret Store.
 Thus the following command will disable both:
 
-```bash
+```
 $ sudo snap set edgexfoundry security-secret-store=off
 ```
 
 #### API Gateway
 Kong is used for access control to the EdgeX services from external systems and is referred to as the API Gateway. 
 
-For more details please refer to the EdgeX API Gateway [documentation](https://docs.edgexfoundry.org/1.3/microservices/security/Ch-APIGateway/).
+For more details please refer to the EdgeX API Gateway [documentation](https://docs.edgexfoundry.org/2.1/security/Ch-APIGateway/).
 
 
 The API Gateway can be disabled by using the following command:
 
-```bash
+```
 $ sudo snap set edgexfoundry security-proxy=off
 ```
 
-**Note** - by default all services in the snap except for the API Gateway are restricted to listening on 'localhost' (i.e. the services are
-not addressable from another system). In order to make a service accessible remotely, the appropriate configuration override of the
-'Service.ServerBindAddr' needs to be made (e.g. ```sudo snap set edgexfoundry env.core-data.service.server-bind-addr=0.0.0.0```).
-
+**Note** - by default all services in the snap except for the API Gateway are restricted to listening on 'localhost' 
+(i.e. the services arenot addressable from another system). In order to make a service accessible remotely, 
+the appropriate configuration override of the 'Service.ServerBindAddr' needs to be made 
+(e.g. ```sudo snap set edgexfoundry env.core-data.service.server-bind-addr=0.0.0.0```).
 
 #### API Gateway user setup
 
 ##### JWT tokens
 
-Before the API Gateway can be used, a user and group must be created, and a JWT access token generated. This can be accomplised via the
-`secrets-config` command, or by using `snap set` commands.
+Before the API Gateway can be used, a user and group must be created and a JWT access token generated.
 
-The first step is to add a user. You need to create a public/private keypair, which can be done with
+1. The first step is to create a public/private keypair for the new user, which can be done with
 
-```bash
+```
 # Create private key:
 $ openssl ecparam -genkey -name prime256v1 -noout -out private.pem
 
@@ -240,36 +250,43 @@ $ openssl ecparam -genkey -name prime256v1 -noout -out private.pem
 $ openssl ec -in private.pem -pubout -out public.pem
 ```
 
-If you then create the user using the secrets-config command, then you need to provide
-- The username
-- The public key
-- (optionally) ID. This is a unique string identifying the credential. It will be required in the next step to create the JWT token. If you don't specify it, 
-then an autogenerated one will be output by the secrets-config command
+1. The next step is to create the user. The easiest way to create a single API gateway user is to use `snap set` to set two values as follows:
 
-```bash
-$ edgexfoundry.secrets-config proxy adduser --token-type jwt --user user01 --algorithm ES256 --public_key public.pem --id USER_ID
 ```
-
-Alternatively, to do this using `snap set`:
-
-```bash
 # set user=username,user id,algorithm (ES256 or RS256)
-sudo snap set edgexfoundry env.security-proxy.user=user01,USER_ID,ES256
+$ sudo snap set edgexfoundry env.security-proxy.user=user01,USER_ID,ES256
 
 # set public-key to the contents of a PEM-encoded public key file
-sudo snap set edgexfoundry env.security-proxy.public-key="$(cat public.pem)"
+$ sudo snap set edgexfoundry env.security-proxy.public-key="$(cat public.pem)"
 ```
 
-The second step is then to generate a token using the user ID which you specified:
+Alternatively, you can create the user using the secrets-config command. You need to provide the following:
 
-```bash
-$ edgexfoundry.secrets-config proxy jwt --algorithm ES256 --private_key private.pem --id USER_ID --expiration=1h
-TOKEN="copy manually from output of secrets-config command"
+- The username
+- The public key
+- The API Gateway Admin JWT token
+- (optionally) ID. This is a unique string identifying the credential. It will be required in the next step to create the JWT token. 
+If you don't specify it, then an autogenerated one will be output by the secrets-config command
+
+```
+# get API Gateway/Kong token
+$ JWT_FILE=/var/snap/edgexfoundry/current/secrets/security-proxy-setup/kong-admin-jwt
+$ JWT=`sudo cat ${JWT_FILE}`
+
+# use secrets-config to add user
+$ edgexfoundry.secrets-config proxy adduser --token-type jwt --user user01 --algorithm ES256 --public_key public.pem --id USER_ID --jwt ${JWT}
+```
+
+1. Finally, you need to generate a token using the user ID which you specified:
+
+```
+# get token
+$ TOKEN=`edgexfoundry.secrets-config proxy jwt --algorithm ES256 --private_key private.pem --id USER_ID --expiration=1h`
 ```
 
 Alternatively , you can generate the token on a different device using a bash script:
 
-```bash
+```
 header='{
     "alg": "ES256",
     "typ": "JWT"
@@ -286,67 +303,61 @@ payload='{
 
 JWT_HEADER=`echo -n $header | openssl base64 -e -A | sed s/\+/-/ | sed -E s/=+$//`
 JWT_PAYLOAD=`echo -n $payload | openssl base64 -e -A | sed s/\+/-/ | sed -E s/=+$//`
-JWT_SIGNATURE=`echo -n "$JWT_HEADER.$JWT_PAYLOAD" | openssl dgst -sha256 -binary -sign private.pem  | openssl asn1parse -inform DER  -offset 2 | grep -o "[0-9A-F]\+$" | tr -d '\n' | xxd -r -p | base64 -w0 | tr -d '=' | tr '+/' '-_'`
+JWT_SIGNATURE=`echo -n "$JWT_HEADER.$JWT_PAYLOAD" | openssl dgst -sha256 -binary -sign private.pem  | 
+openssl asn1parse -inform DER  -offset 2 | grep -o "[0-9A-F]\+$" | tr -d '\n' | xxd -r -p | base64 -w0 | 
+tr -d '=' | tr '+/' '-_'`
 TOKEN=$JWT_HEADER.$JWT_PAYLOAD.$JWT_SIGNATURE
 ```
 
-The resulting JWT token must be included
-via an HTTP `Authorization: Bearer <access-token>` header on any REST calls used to access EdgeX services via the API Gateway. 
+1. Once you have the token you can access the API Gateway as follows:
+
+The JWT token must be included via an HTTP `Authorization: Bearer <access-token>` header on any REST calls used to access EdgeX services via the API Gateway.
 
 Example:
 
-```bash
-$ curl -k -X GET https://localhost:8443/coredata/api/v1/ping? -H "Authorization: Bearer $TOKEN"
+```
+$ curl -k -X GET https://localhost:8443/core-data/api/v2/ping? -H "Authorization: Bearer $TOKEN"
 ```
 
-Additional users can be added by repeatedly calling the secrets-config command as above. Only one user can however be set at any time when using the snap configure hook, so
-the current user must first be removed by setting the snap configuration settings to an empty string, before setting the values again:
-
-```bash
-$ sudo snap set edgexfoundry env.security-proxy.user=""
-$ sudo snap set edgexfoundry env.security-proxy.public-key=""
-$ sudo snap set edgexfoundry env.security-proxy.user=user02,USER_ID2,ES256
-$ sudo snap set edgexfoundry env.security-proxy.public-key="$(cat public.pem)"
-```
-  
+Additional users can be added by repeatedly calling the secrets-config command as above.
 
 #### API Gateway TLS certificate setup
 
-By default Kong is configured with an EdgeX signed TLS certificate. Client validation of this certificate requires the root CA certificate from the EdgeX instance. This file
-(`ca.pem`) can be copied from directory `$SNAP_DATA/secrets/ca`.
-
-It is also possible to install your own TLS certificate to be used by the gateway. The steps to do so are as follows:
+By default Kong is configured with a selfsigned TLS certificate. It is also possible to install your own TLS certificate to be used by the gateway. 
+The steps to do so are as follows:
 
 Start by provisioning a TLS certificate to use. One way to do so for testing purposes is to use the edgeca snap:
 
-```bash
+```
 $ sudo snap install edgeca
 $ edgeca gencsr --cn localhost --csr csrfile --key csrkeyfile
 $ edgeca gencert -o localhost.cert -i csrfile -k localhost.key
 ```
 
 Then install the certificate:
-```bash
+
+```
 $ sudo snap set edgexfoundry env.security-proxy.tls-certificate="$(cat localhost.cert)"
 $ sudo snap set edgexfoundry env.security-proxy.tls-private-key="$(cat localhost.key)"
 ```
 
-This sample certificate is signed by the EdgeCA root CA, so by specifying the Root CA certificate for validation then a connection can now be made using your new certificate:
+This sample certificate is signed by the EdgeCA root CA, so by specifying the Root CA certificate for validation then a connection can now be made 
+using your new certificate:
 
-```bash
-$ curl -v --cacert /var/snap/edgeca/current/CA.pem -X GET https://localhost:8443/coredata/api/v1/ping? -H "Authorization: Bearer $TOKEN"
+```
+$ curl -v --cacert /var/snap/edgeca/current/CA.pem -X GET https://localhost:8443/core-data/api/v2/ping? -H "Authorization: Bearer $TOKEN"
 ```
 
 To set the certificate again, you first need to clear the current setting by setting the values to an empty string:
 
-```bash
+```
 $ sudo snap set edgexfoundry env.security-proxy.tls-certificate=""
 $ sudo snap set edgexfoundry env.security-proxy.tls-private-key=""
 ```
 
 If you are using a different server name than localhost, then it needs to be specified first using the optional tls-sni configuration setting. Example:
 
-```bash
+```
 $ edgeca gencsr --cn server01 --csr csrfile --key csrkeyfile
 $ edgeca gencert -o server.cert -i csrfile -k server.key
 $ sudo snap set edgexfoundry env.security-proxy.tls-certificate=""
@@ -355,7 +366,7 @@ $ sudo snap set edgexfoundry env.security-proxy.tls-sni="server01"
 $ sudo snap set edgexfoundry env.security-proxy.tls-certificate="$(cat server.cert)"
 $ sudo snap set edgexfoundry env.security-proxy.tls-private-key="$(cat server.key)"
 
-$ curl -v --cacert /var/snap/edgeca/current/CA.pem -X GET https://server01:8443/coredata/api/v1/ping? -H "Authorization: Bearer $TOKEN"
+$ curl -v --cacert /var/snap/edgeca/current/CA.pem -X GET https://localhost:8443/core-data/api/v2/ping? -H "Authorization: Bearer $TOKEN"
 ```
 
 ## Limitations
@@ -363,164 +374,177 @@ $ curl -v --cacert /var/snap/edgeca/current/CA.pem -X GET https://server01:8443/
 [See the GitHub issues with label snap for current issues.](https://github.com/edgexfoundry/edgex-go/issues?q=is%3Aopen+is%3Aissue+label%3Asnap)
 
 ## Service environment configuration overrides
-**Note** - all of the configuration options below must be specified with the prefix: 'env.\<service\>.' where '\<service\>' is one of the following:
+**Note** - all of the configuration options below must be specified with the prefix: `env.<service>.` where `<service>` is one of the following:
 
-  - core-command
   - core-data
   - core-metadata
+  - core-command
   - support-notifications
   - support-scheduler
-  - sys-mgmt-agent
-  - security-proxy
-  - security-secret-store
+  - app-service-configurable
   - device-virtual
-  - app-service-config
+  - security-secret-store
+  - security-proxy
+  - sys-mgmt-agent
 
 Example: `snap set edgexfoundry env.device-virtual.service.port=7777`
 
 
-| [Service]             | Description |
-| --------------------- | ----------- |
+| [Service]                     | Description |
+| ------------------------------| ----------- |
 | service.health-check-interval | HealthCheckInterval is the interval for Registry heal check callback |
-| service.host: | 	Host is the hostname or IP address of the service. |
-| service.port | 	Port is the HTTP port of the service. |
-| service.server-bind-addr | 	ServerBindAddr specifies an IP address or hostname  for ListenAndServe to bind to, such as 0.0.0.0 |
-| service.startup-msg | 	StartupMsg specifies a string to log once service  initialization and startup is completed. |
-| service.max-result-count: | 	MaxResultCount specifies the maximum size list supported in response to REST calls to other services. |
-| service.max-request-size | 	MaxRequestSize defines the maximum size of http request body in bytes |
-| service.request-timeout | RequestTimeout specifies a timeout (in milliseconds) for processing REST request calls from other services. |
- 
+| service.host:                 | Host is the hostname or IP address of the service. |
+| service.port                  | Port is the HTTP port of the service. |
+| service.server-bind-addr      | ServerBindAddr specifies an IP address or hostname  for ListenAndServe to bind to, such as 0.0.0.0 |
+| service.startup-msg           | StartupMsg specifies a string to log once service  initialization and startup is completed. |
+| service.max-result-count      | MaxResultCount specifies the maximum size list supported in response to REST calls to other services. |
+| service.max-request-size      | MaxRequestSize defines the maximum size of http request body in bytes |
+| service.request-timeout       | RequestTimeout specifies a timeout (in milliseconds) for processing REST request calls from other services. |
+
+| [SecretStore]                           | Description                                                  |
+| --------------------------------------- | ------------------------------------------------------------ |
+| secret-store.secrets-file               | Sets the path of the JSON file containing secrets needed for seeding. If left blank, seeding is skipped. |
+| secret-store.disable-scrub-secrets-file | If set, `secret-store.secrets-file` will not overwrite the default secret. |
+
 
 | [Clients]             | Description |
-| --------------------- | ----------- |
-| clients.core-command.port || 
-| clients.core-data.port | | 
-| clients.core-metadata.port | |
- |clients.support-notificationss.port| |
- | clients.support-scheduler.port | |
+| --------------------------------- | ----------- |
+| clients.core-command.port         | Clients' core-command port. |
+| clients.core-data.port            | Clients' core-data port port. |
+| clients.core-metadata.port        | Clients' core-metadata port. |
+| clients.support-notifications.port| Clients' support-notifications port. |
+| clients.support-scheduler.port    | Clients' support-scheduler port. |
 
 
-| [MessageQueue] (core-data only) | Description |
-| --------------------- | ----------- |
-| messagequeue.type | Indicates the message bus implementation to use, i.e. zero, mqtt, redisstreams...|
-| messagequeue.protocol | Protocol indicates the protocol to use when accessing the message bus.|
-|	messagequeue.host | Host is the hostname or IP address of the broker, if applicable.|
-| messagequeue.port | Port defines the port on which to access the message bus.|
+| [MessageQueue] (core-data only)   | Description |
+| --------------------------------- | ----------- |
+| messagequeue.type                 | Indicates the message bus implementation to use, i.e. mqtt, redis streams. |
+| messagequeue.protocol             | Protocol indicates the protocol to use when accessing the message bus.|
+|	messagequeue.host                 | Host is the hostname or IP address of the broker, if applicable.|
+| messagequeue.port                 | Port defines the port on which to access the message bus.|
 | messagequeue.publish-topic-prefix | PublishTopicPrefix indicates the topic prefix the data is published to.|
-|messagequeue.subscribe-topic | SubscribeTopic indicates the topic in which to subscribe.|
-| messagequeue.auth-mode | AuthMode specifies the type of secure connection to the message bus which are 'none', 'usernamepassword','clientcert' or 'cacert'. Not all option supported by each implementation. ZMQ doesn't support any Authmode beyond 'none', RedisStreams only supports 'none' & 'usernamepassword' while MQTT supports all options.|
-|messagequeue.secret-name|  SecretName is the name of the secret in the SecretStore that contains the Auth Credentials. The credential are dynamically loaded using this name and store the Option property below where the implementation expected to find them.|
-|messagequeue.subscribe-enabled| SubscribeEnabled indicates whether enable the subscription to the Message Queue|
+| messagequeue.subscribe-topic      | SubscribeTopic indicates the topic in which to subscribe.|
+| messagequeue.auth-mode            | AuthMode specifies the type of secure connection to the message bus which are 'none', 'usernamepassword','clientcert' or 'cacert'. Not all option supported by each implementation. ZMQ doesn't support any Authmode beyond 'none', RedisStreams only supports 'none' & 'usernamepassword' while MQTT supports all options.|
+|messagequeue.secret-name           | SecretName is the name of the secret in the SecretStore that contains the Auth Credentials. The credential are dynamically loaded using this name and store the Option property below where the implementation expected to find them.|
+|messagequeue.subscribe-enabled     | SubscribeEnabled indicates whether enable the subscription to the Message Queue|
 
 | [Trigger]   | Description |
-| --------------------- | ----------- |
-| trigger.edgex-message-bus.subscribe-host.port||
-| trigger.edgex-message-bus.subscribe-host.protocol||
-|trigger.edgex-message-bus.subscribe-host.subscribe-topics||
-|trigger.edgex-message-bus.publish-host.port ||
-|trigger.edgex-message-bus.publish-host.protocol||
-|trigger.edgex-message-bus.publish-host.publish-topic||
+| -------------------------------------------------------- | ----------- |
+| trigger.edgex-message-bus.subscribe-host.port            | Port defines the port on which to access the EdgexMessageBus's SubscribeHost.|
+| trigger.edgex-message-bus.subscribe-host.protocol        | Protocol indicates the protocol to use when accessing the EdgexMessageBus's SubscribeHost. |
+| trigger.edgex-message-bus.subscribe-host.subscribe-topics| SubscribeTopic indicates the topic in which edgexMessageBus's SubscribeHost to subscribe. |
+| trigger.edgex-message-bus.publish-host.port              | Port defines the port on which to access the EdgexMessageBus's PublishHost. |
+| trigger.edgex-message-bus.publish-host.protocol          | Protocol indicates the protocol to use when accessing the EdgexMessageBus's PublishHost. |
+| trigger.edgex-message-bus.publish-host.publish-topic     | PublishTopic indicates the topic in which edgexMessageBus's PublishHost to subscribe. |
 
-
-
-### API Gateway settings (prefix: env.security-proxy.)
-
-
+### API Gateway settings (prefix: `env.security-proxy.`)
 
 | API Gateway setting   | Description |
 | --------------------- | ----------- |
-| add-proxy-route | The add-proxy-route setting is a csv list of URLs to be added to the API Gateway (aka Kong). See [documentation](https://docs.edgexfoundry.org/1.3/microservices/security/Ch-APIGateway/) NOTE - this setting is not a configuration override, it's a top-level environment variable used by the security-proxy-setup. |
+| add-proxy-route       | The add-proxy-route setting is a configuration TOML containing a list of URLs to be added to the API Gateway (aka Kong). See [documentation](https://docs.edgexfoundry.org/2.1/security/Ch-APIGateway/#configuration-of-adding-microservices-routes-for-api-gateway) NOTE - this setting is not a configuration override, it's a top-level environment variable used by the security-proxy-setup. That means it can not be configureed thourgh `snap set` |
 
-
-### Secret Store settings (prefix: env.security-secret-store.)
+### Secret Store settings (prefix: `env.security-secret-store.`)
 
 | API Gateway setting   | Description |
 | --------------------- | ----------- |
-| add-secretstore-tokens | The add-secretstore-tokens setting is a csv list of service keys to be added to the list of Vault tokens that security-file-token-provider (launched by security-secretstore-setup) creates. It is set to a default list of additional services by the snap, so be sure to examine the default setting before providing a custom list of services. NOTE - this setting is not a configuration override, it's a top-level environment variable used by the security-secretstore-setup. |
-| add-known-secrets | The add-known-secrets setting is a csv list of secret paths and associated services. It's used to provision the specified secret for the given service in Vault. It is set to a default list of additional services by the snap, so be sure to examine the default setting before providing a custom list of services. NOTE - this setting is not a configuration override, it's a top-level environment variable used by the security-secretstore-setup.|
+| add-secretstore-tokens | The add-secretstore-tokens setting is a JSON list of service keys to be added to the list of Vault tokens that security-file-token-provider (launched by security-secretstore-setup) creates. It is set to a default list of additional services by the snap, so be sure to examine the default setting before providing a custom list of services. NOTE - this setting is not a configuration override, it's a top-level environment variable used by the security-secretstore-setup. |
+| add-known-secrets | The add-known-secrets setting is a JSON list of secret paths and associated services. It's used to provision the specified secret for the given service in Vault. It is set to a default list of additional services by the snap, so be sure to examine the default setting before providing a custom list of services. NOTE - this setting is not a configuration override, it's a top-level environment variable used by the security-secretstore-setup. |
 | default-token-ttl | The default-token-ttl setting is a Go Duration string, a sequence of decimal numbers, each with optional fraction and a unit suffix (e.g. "ns", "us" (or "µs"), "ms", "s", "m", "h"). It's used to set the TTL of vault tokens generated for EdgeX services during bootstrap. This setting can be used to increase (or decrease) the default TTL (one hour). If the TTL of a token expires before a service is started, the service will not be able to access the Secret Store.|
 
-### Security bootstrapper settings (prefix: env.security-bootstrapper.)
+### Security bootstrapper settings (prefix: `env.security-bootstrapper.`)
 
 | setting   | Description |
 | --------------------- | ----------- |
-|add-registry-acl-roles| A comma separated list of registry role names to be added |
+| add-registry-acl-roles| The add-registry-acl-roles is a JSON list of service keys used to create ACL roles in Vault to allow secure Consul access for the services. It contains a comma-separated list of registry role names to be added |
 
 
-### Support Notifications settings (prefix: env.support-notifications.)
+### Support Notifications settings (prefix: `env.support-notifications.`)
 
 | [Smtp] | Description |
-| --------------------- | ----------- |
-| smtp.host | SMTP hostname|
-|smtp.username| SMTP username|
-|smtp.password| SMTP password|
-|smtp.port| SMTP port|
-|smtp.sender| Notification message sender|
-|smtp.enable-self-signed-cert| Enable support for invalid (self-signed) certificates|
-|smtp.subject| Notification message subject|
-|smtp.auth-mode| User need to store the credential via the /secret API before sending the email notification. AuthMode is the SMTP authentication mechanism. Currently, 'usernamepassword' is the only AuthMode supported by this service, and the secret keys are 'username' and 'password'. |
-
-
+| --------------------------- | ----------- |
+| smtp.host                   | SMTP hostname|
+| smtp.username               | SMTP username|
+| smtp.password               | SMTP password|
+| smtp.port                   | SMTP port|
+| smtp.sender                 | Notification message sender|
+| smtp.enable-self-signed-cert| Enable support for invalid (self-signed) certificates|
+| smtp.subject                | Notification message subject|
+| smtp.auth-mode              | User need to store the credential via the /secret API before sending the email notification. AuthMode is the SMTP authentication mechanism. Currently, `usernamepassword' is the only AuthMode supported by this service, and the secret keys are 'username' and 'password'. |
 
 ## Building
 
-The snap is built with [snapcraft](https://snapcraft.io), and the snapcraft.yaml recipe is located within `edgex-go`, so the first step for all build methods involves cloning this repository:
+The snap is built with [snapcraft](https://snapcraft.io), and the snapcraft.yaml recipe is located within `edgex-go`, 
+so the first step for all build methods involves cloning this repository:
 
-```bash
+```
 $ git clone https://github.com/edgexfoundry/edgex-go
 $ cd edgex-go
 ```
 
 ### Installing snapcraft
 
-There are a few different ways to install snapcraft and use it, depending on what OS you are building on. However after building, the snap can only be run on a Linux machine (either a VM or natively). To install snapcraft on a Linux distro, first [install support for snaps](https://snapcraft.io/docs/installing-snapd), then install snapcraft as a snap with:
+There are a few different ways to install snapcraft and use it, depending on what OS you are building on. However after building, 
+the snap can only be run on a Linux machine (either a VM or natively). To install snapcraft on a Linux distro, 
+first [install support for snaps](https://snapcraft.io/docs/installing-snapd), then install snapcraft as a snap with:
 
-```bash
+```
 $ sudo snap install snapcraft
 ```
 
 (note you will be promted to acknowledge you are installing a classic snap - use the `--classic` flag to acknowledge this)
 
-**Note** - currently the snap doesn't support cross-compilation, and must be built natively on the target architecture. Specifically, to support cross-compilation the kong/lua parts must be modified to support cross-compilation. The openresty part uses non-standard flags for handling cross-compiling so all the flags would have to manually passed to build that part. Also luarocks doesn't seem to easily support cross-compilation, so that would need to be figured out as well.
+**Note** - currently the snap doesn't support cross-compilation, and must be built natively on the target architecture. 
+Specifically, to support cross-compilation the kong/lua parts must be modified to support cross-compilation. 
+The openresty part uses non-standard flags for handling cross-compiling so all the flags would have to manually passed to build that part. 
+Also luarocks doesn't seem to easily support cross-compilation, so that would need to be figured out as well.
 
 #### Running snapcraft on MacOS
 
-To install snapcraft on MacOS, see [this link](https://snapcraft.io/docs/install-snapcraft-on-macos). After doing so, follow in the below build instructions for "Building with multipass"
+To install snapcraft on MacOS, see [this link](https://snapcraft.io/docs/installing-snapcraft#heading--macos). 
+After doing so, follow in the below build instructions for "[Building with multipass](#building-with-multipass)".
 
 #### Running snapcraft on Windows
 
-To install snapcraft on Windows, you will need to run a Linux VM and follow the above instructions to install snapcraft as a snap. Note that if you are using WSL, only WSL2 with full Linux kernel support will work - you cannot use WSL with snapcraft and snaps. If you like, you can install multipass to launch a Linux VM if your Windows machine has Windows 10 Pro or Enterprise with Hyper-V support. See this [forum post](https://discourse.ubuntu.com/t/installing-multipass-for-windows/9547) for more details.
+To install snapcraft on Windows, you will need to run a Linux VM and follow the above instructions to install snapcraft as a snap. 
+Note that if you are using WSL, only WSL2 with full Linux kernel support will work - you cannot use WSL with snapcraft and snaps. 
+If you like, you can install multipass to launch a Linux VM if your Windows machine has Windows 10 Pro or Enterprise with Hyper-V support. 
+See this [forum post](https://discourse.ubuntu.com/t/installing-multipass-for-windows/9547) for more details.
 
 ### Building with multipass
 
-The easiest way to build the snap is using the multipass VM tool that snapcraft knows to use directly. After [installing multipass](https://multipass.run), just run 
+The easiest way to build the snap is using the multipass VM tool that snapcraft knows to use directly. 
+After [installing multipass](https://multipass.run), just run 
 
-```bash
+```
 $ snapcraft
 ```
 
 ### Building with LXD containers
 
-Alternatively, you can instruct snapcraft to use LXD containers instead of multipass VM's. This requires installing LXD as documented [here](https://snapcraft.io/docs/build-on-lxd).
+Alternatively, you can instruct snapcraft to use LXD containers instead of multipass VM's. 
+This requires installing LXD as documented [here](https://snapcraft.io/docs/build-on-lxd).
 
-```bash
+```
 $ snapcraft --use-lxd
 ```
 
-Note that if you are building on non-amd64 hardware, snapcraft won't be able to use it's default LXD container image, so you can follow the next section to create an LXD container to run snapcraft in destructive-mode natively in the container.
+Note that if you are building on non-amd64 hardware, snapcraft won't be able to use it's default LXD container image, 
+so you can follow the next section to create an LXD container to run snapcraft in destructive-mode natively in the container.
 
 ### Building inside external container/VM using native snapcraft
 
-Finally, snapcraft can be run inside a VM, container or other similar build environment to build the snap without having snapcraft manage the environment (such as in a docker container where snaps are not available, or inside a VM launched from a build-farm without using nested VM's). 
+Finally, snapcraft can be run inside a VM, container or other similar build environment to build the snap without having snapcraft manage the environment 
+(such as in a docker container where snaps are not available, or inside a VM launched from a build-farm without using nested VM's). 
 
 This requires creating an Ubuntu 18.04 environment and running snapcraft (from the snap) inside the environment with `--destructive-mode`. 
 
 #### LXD
 
-Snaps run inside LXD containers just like they do outside the container, so all you need to do is launch an Ubuntu 18.04 container, install snapcraft and run snapcraft like follows:
+Snaps run inside LXD containers just like they do outside the container, so all you need to do is launch an Ubuntu 20.04 container, 
+install snapcraft and run snapcraft like follows:
 
-```bash
-$ lxc launch ubuntu:18.04 edgex
+```
+$ lxc launch ubuntu:20.04 edgex
 Creating edgex
 Starting edgex
 $ lxc exec edgex /bin/bash
@@ -532,20 +556,27 @@ root@edgex:~# cd edgex-go && snapcraft --destructive-mode
 
 #### Docker
 
-Snapcraft is smart enough to detect when it is running inside a docker container specifically, to the point where no additional arguments are need to snapcraft when it is run inside the container. For example, the upstream snapcraft docker image can be used (only on x86_64 architectures unfortunately) like so:
+Snapcraft is smart enough to detect when it is running inside a docker container specifically, 
+to the point where no additional arguments are need to snapcraft when it is run inside the container. 
+For example, the upstream snapcraft docker image can be used (only on x86_64 architectures unfortunately) like so:
 
-```bash
+```
 $ docker run -it -v"$PWD":/build snapcore/snapcraft:stable bash -c "apt update && cd /build && snapcraft"
 ```
 
-Note that if you are building your own docker image, you can't run snapd inside the container, and so to install snapcraft, the docker image must download the snapcraft snap and extract it as if it was installed normally inside `/snap` (same goes for the `core` and `core18` snaps). This is done by the Linux Foundation Jenkins server for the project's CI and you can see an example of that [here](https://github.com/edgexfoundry/ci-management/blob/master/shell/edgexfoundry-snapcraft.sh). The upstream docker image also does this, but only for x86_64 architectures.
+Note that if you are building your own docker image, you can't run snapd inside the container, and so to install snapcraft, 
+the docker image must download the snapcraft snap and extract it as if it was installed normally inside `/snap` 
+(same goes for the `core` and `core18` snaps). 
+This is done by the Linux Foundation Jenkins server for the project's CI and you can see an example of that 
+[here](https://github.com/edgexfoundry/ci-management/blob/master/shell/edgexfoundry-snapcraft.sh). 
+The upstream docker image also does this, but only for x86_64 architectures.
 
 #### Multipass / generic VM
 
-To use multipass to create an Ubuntu 18.04 environment suitable for building the snap (i.e. when running natively on windows):
+To use multipass to create an Ubuntu 20.04 environment suitable for building the snap (i.e. when running natively on windows):
 
-```bash
-$ multipass launch bionic -n edgex-snap-build
+```
+$ multipass launch focal -n edgex-snap-build
 $ multipass shell edgex-snap-build
 multipass@ubuntu:~$ git clone https://github.com/edgexfoundry/edgex-go
 multipass@ubuntu:~$ cd edgex-go
@@ -553,40 +584,90 @@ multipass~ubuntu:~$ sudo snap install snapcraft --classic
 multipass~ubuntu:~$ snapcraft --destructive-mode
 ```
 
-The process should be similar for other VM's such as kvm, VirtualBox, etc. where you create the VM, clone the git repository, then install snapcraft as a snap and run with `--destructive-mode`. 
+The process should be similar for other VM's such as kvm, VirtualBox, etc. where you create the VM, clone the git repository, 
+then install snapcraft as a snap and run with `--destructive-mode`. 
 
 ### Developing the snap
 
-After building the snap from one of the above methods, you will have a binary snap package called `edgexfoundry_<latest version>_<arch>.snap`, which can be installed locally with the `--devmode` flag:
+After building the snap from one of the above methods, you will have a binary snap package called `edgexfoundry_<latest version>_<arch>.snap`, 
+which can be installed locally with the `--devmode` flag:
 
-```bash
+```
 $ sudo snap install --devmode edgexfoundry*.snap
 ```
 
-In addition, if you are using snapcraft with multipass VM's, you can speedup development by not creating a *.snap file and instead running in "try" mode . This is done by running `snapcraft try` which results in a `prime` folder placed in the root project directory that can then be "installed" using `snap try`. For example:
+In addition, if you are using snapcraft with multipass VM's, you can speedup development by using `snapcraft try` and `snap try`:
 
-```bash
-$ snapcraft try # produces prime dir instead of *.snap file
-...
-You can now run `snap try /home/ubuntu/go/src/github.com/edgexfoundry/edgex-go/prime`.
-$ sudo snap try --devmode prime # snap try works the same as snap install, but expects a directory
-edgexfoundry 1.0.0-20190513+0620a8d1 mounted from /home/ubuntu/go/src/github.com/edgexfoundry/edgex-go/prime
-$
+1. Clean your multipass VM
+
+```
+$ snapcraft clean
+```
+
+2. Create a snap file with a prime folder placed in the root project directory
+
+```
+$ snapcraft prime --shell
+```
+
+It produces prime directory instead of *.snapfile, and copies its prime directory to the current working directory on the host system - 
+outside of any build environment container.
+
+3. Install an unpacked snap using a bind mount to test out the snap defined in the project directory
+
+```
+$ sudo snap try prime --devmode
+```
+
+`snap try` works the same as `snap install`, but expects a directory. 
+
+4. Change your code, then repeat step 2 and 3
+
+5. Ship the tested snap file
+
+```
+$ sudo snap pack ./prime
 ```
 
 #### Interfaces
 
-After installing the snap, you will need to connect interfaces and restart the snap. The snap needs the `hardware-observe`, `mount-observe`, and `system-observe` interfaces connected. These are automatically connected using snap store assertions when installing from the store, but when developing the snap and installing a revision locally, use the following commands to connect the interfaces:
+After installing the snap, you will need to connect interfaces and restart the snap. 
+Interfaces are automatically connected using snap store assertions when installing from the store, 
+but when developing the snap and installing a revision locally, use the commands in this section to connect the interfaces.
 
-```bash
-$ sudo snap connect edgexfoundry:hardware-observe
-$ sudo snap connect edgexfoundry:system-observe
-$ sudo snap connect edgexfoundry:mount-observe
+To see which interfaces the snap is using, and which interfaces it could use but isn’t:
+
+```
+$ sudo snap connections edgexfoundry
+```
+
+```
+Interface                         Plug                                  Slot                                                    Notes
+content[edgex-secretstore-token]  edgexfoundry:edgex-secretstore-token  edgex-app-service-configurable:edgex-secretstore-token  -
+content[edgex-secretstore-token]  edgexfoundry:edgex-secretstore-token  edgex-device-mqtt:edgex-secretstore-token               -
+content[edgex-secretstore-token]  edgexfoundry:edgex-secretstore-token  edgex-device-snmp:edgex-secretstore-token               -
+home                              edgexfoundry:home                     :home                                                   -
+network                           edgexfoundry:network                  :network                                                -
+network-bind                      edgexfoundry:network-bind             :network-bind                                           -
+removable-media                   edgexfoundry:removable-media          -                                                       -
+```
+
+Manual connections:
+
+```
+$ snap connect <snap>:<plug interface> <snap>:<slot interface>
+```
+
+Here is an example:
+
+```
+$ sudo snap connect edgexfoundry:edgex-secretstore-token <your-snap>:<slot>
 ```
 
 After connecting these restart the services in the snap with:
 
-```bash
+```
 $ sudo snap restart edgexfoundry
 ```
 
+For more details about the snap interface, please refer [here](https://snapcraft.io/docs/interface-management).
