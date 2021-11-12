@@ -235,23 +235,6 @@ sudo snap set edgexfoundry security-proxy=off
 the appropriate configuration override of the 'Service.ServerBindAddr' needs to be made 
 (e.g. ```sudo snap set edgexfoundry env.core-data.service.server-bind-addr=0.0.0.0```).
 
-#### API Gateway
-Kong is used for access control to the EdgeX services from external systems and is referred to as the API Gateway. 
-
-For more details please refer to the EdgeX API Gateway [documentation](https://docs.edgexfoundry.org/1.3/microservices/security/Ch-APIGateway/).
-
-
-The API Gateway can be disabled by using the following command:
-
-```bash
-sudo snap set edgexfoundry security-proxy=off
-```
-
-**Note** - by default all services in the snap except for the API Gateway are restricted to listening on 'localhost' (i.e. the services are
-not addressable from another system). In order to make a service accessible remotely, the appropriate configuration override of the
-'Service.ServerBindAddr' needs to be made (e.g. ```sudo snap set edgexfoundry env.core-data.service.server-bind-addr=0.0.0.0```).
-
-
 #### API Gateway user setup
 
 ##### JWT tokens
