@@ -89,7 +89,7 @@ Lastly, on a system supporting it, the snap may be installed using GNOME (or Ubu
 **Note** - the snap has only been tested on Ubuntu Desktop/Server LTS releases (16.04 or later), as well as Ubuntu Core (16 or later).
 
 **WARNING** - don't install the EdgeX snap on a system which is already running one of the included services 
-(e.g. Consul, Redis, Vault, ...), as this may result in resource conflicts (i.e. ports) which could cause the `snap install` to fail.
+(e.g. Consul, Redis, Vault, ...), as this may result in resource conflicts (i.e. ports) which could cause the `snap install` command to fail.
 
 ## Using the EdgeX snap
 
@@ -495,12 +495,6 @@ sudo snap install snapcraft
 ```
 
 (note you will be promted to acknowledge you are installing a classic snap - use the `--classic` flag to acknowledge this)
-
-**Note** - currently the snap doesn't support cross-compilation, and must be built natively on the target architecture. 
-Specifically, to support cross-compilation, the kong part must be modified:
-* OpenResty uses non-standard flags for handling cross-compiling so all the flags would have to manually passed to build that part.
-* LuaRocks doesn't seem to easily support cross-compilation and needs further investigation.
-
 #### Running snapcraft on MacOS
 
 To install snapcraft on MacOS, see [this link](https://snapcraft.io/docs/installing-snapcraft#heading--macos). 
@@ -665,12 +659,6 @@ Here is an example:
 
 ```bash
 sudo snap connect edgexfoundry:edgex-secretstore-token <your-snap>:<slot>
-```
-
-After connecting these restart the services in the snap with:
-
-```bash
-sudo snap restart edgexfoundry
 ```
 
 For more details about the snap interface, please refer [here](https://snapcraft.io/docs/interface-management).
