@@ -587,7 +587,7 @@ then install snapcraft as a snap and run with `--destructive-mode`.
 ### Developing the snap
 
 After building the snap from one of the above methods, you will have a binary snap package called `edgexfoundry_<latest version>_<arch>.snap`, 
-which can be installed locally with the `--devmode` flag:
+which can be installed locally with the `--dangerous` flag:
 
 ```bash
 sudo snap install --devmode edgexfoundry*.snap
@@ -595,7 +595,7 @@ sudo snap install --devmode edgexfoundry*.snap
 
 In addition, if you are using snapcraft with multipass VM's, you can speedup development by using `snapcraft try` and `snap try`:
 
-1. Clean your multipass VM
+1. Clean all the parts (optional to ensure a clean start)
 
 ```bash
 snapcraft clean
