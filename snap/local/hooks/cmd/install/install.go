@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	hooks "github.com/canonical/edgex-snap-hooks/v2"
+	// log "github.com/canonical/edgex-snap-hooks/v2"
 )
 
 var cli *hooks.CtlCli = hooks.NewSnapCtl()
@@ -187,22 +188,20 @@ func installDevProfiles() error {
 
 // installKuiper execs a shell script to install Kuiper's file into $SNAP_DATA
 func installKuiper() error {
-	setupScriptPath, err := exec.LookPath("install-setup-kuiper.sh")
-	if err != nil {
-		return err
-	}
+	// install files using edgex-ekuiper install hook
+	filePath := hooks.Snap + "/snap.edgex-ekuiper/hooks/install"
 
 	cmdSetupKuiper := exec.Cmd{
-		Path:   setupScriptPath,
-		Args:   []string{setupScriptPath},
-		Stdout: os.Stdout,
-		Stderr: os.Stdout,
+		Path: filePath,
+		Env:  []string{"KUIPER_BASE_KEY=$SNAP_DATA/kuiper"},
 	}
 
-	err = cmdSetupKuiper.Run()
+	_, err := cmdSetupKuiper.CombinedOutput()
 	if err != nil {
 		return err
 	}
+
+	// log.Infof("edgexfoundry:install-kuiper: s%", stdoutStderr)
 
 	return nil
 }
